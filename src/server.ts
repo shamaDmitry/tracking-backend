@@ -1,4 +1,4 @@
-// src/server.ts
+import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -14,17 +14,19 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      process.env.FRONTEND_URL || "*",
-    ],
+    origin: [process.env.FRONTEND_URL || "*"],
     methods: ["GET", "POST"],
   },
 });
 
 app.get("/", (req, res) => {
-  res.status(200).send({ status: "Tracking app backend is working" });
+  res
+    .status(200)
+    .send({
+      status: "Tracking app backend is working",
+      timestamp: new Date(),
+      origin: process.env.FRONTEND_URL,
+    });
 });
 
 app.post("/api/track", (req, res) => {
