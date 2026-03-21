@@ -7,26 +7,33 @@ import { trackerService } from "./services/TrackerService";
 import { PointObject } from "./types";
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((o) => o.trim())
+  : "*";
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+  }),
+);
 app.use(express.json());
 
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: [process.env.FRONTEND_URL || "*"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
   },
 });
 
 app.get("/", (req, res) => {
-  res
-    .status(200)
-    .send({
-      status: "Tracking app backend is working",
-      timestamp: new Date(),
-      origin: process.env.FRONTEND_URL,
-    });
+  res.status(200).send({
+    status: "Tracking app backend is working",
+    timestamp: new Date(),
+    origin: process.env.FRONTEND_URL,
+  });
 });
 
 app.post("/api/track", (req, res) => {
@@ -37,6 +44,7 @@ app.post("/api/track", (req, res) => {
 
 io.on("connection", (socket) => {
   console.log(`Frontend client connected: ${socket.id}`);
+
   socket.on("disconnect", () => {
     console.log(`Frontend client disconnected: ${socket.id}`);
   });
@@ -79,7 +87,7 @@ interface SimulatorState extends PointObject {
 
 const trackerStates = new Map<string, SimulatorState>();
 
-for (let i = 1; i <= 50; i++) {
+for (let i = 1; i <= 150; i++) {
   // Speed is divided by 4 compared to previous 400ms tick to keep same velocity
   const baseSpeed = (0.00025 + Math.random() * 0.001) / 4;
 
