@@ -14,13 +14,17 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      process.env.FRONTEND_URL || "*",
+    ],
     methods: ["GET", "POST"],
   },
 });
 
 app.get("/", (req, res) => {
-  res.status(200).send({ status: "working" });
+  res.status(200).send({ status: "Tracking app backend is working" });
 });
 
 app.post("/api/track", (req, res) => {
