@@ -14,7 +14,8 @@ const allowedOrigins = process.env.FRONTEND_URL
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    // origin: allowedOrigins,
+    origin: "*",
   }),
 );
 app.use(express.json());
