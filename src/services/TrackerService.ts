@@ -7,21 +7,28 @@ export interface TrackerStatusUpdate {
 
 class TrackerService {
   private pendingUpdates: Map<string, PointObject> = new Map();
+
   // Master state to track when we last heard from an object
   private lastSeen: Map<string, number> = new Map();
+
   // Track which objects are currently in 'lost' state to avoid redundant events
   private lostObjects: Set<string> = new Set();
 
-  public ingestLocation(data: PointObject): void {
+  // Track status changes to broadcast (e.g. recovering from 'lost' to 'active')
+  private pendingStatusUpdates: TrackerStatusUpdate[] = [];
+
+  public ingestLocation(data: Omit<PointObject, "status">): void {
     if (!data.id || data.lat === undefined || data.lng === undefined) return;
 
-    this.pendingUpdates.set(data.id, data);
+    this.pendingUpdates.set(data.id, { ...data, status: "active" });
 
     this.lastSeen.set(data.id, Date.now());
 
     // If it was lost and now we see it, it's active again
     if (this.lostObjects.has(data.id)) {
       this.lostObjects.delete(data.id);
+
+      this.pendingStatusUpdates.push({ id: data.id, status: "active" });
     }
   }
 
@@ -45,7 +52,9 @@ class TrackerService {
     removeThresholdMs: number,
   ): TrackerStatusUpdate[] {
     const now = Date.now();
-    const updates: TrackerStatusUpdate[] = [];
+    const updates: TrackerStatusUpdate[] = [...this.pendingStatusUpdates];
+
+    this.pendingStatusUpdates = [];
 
     for (const [id, lastTime] of this.lastSeen.entries()) {
       const elapsed = now - lastTime;

@@ -3,4 +3,5 @@ export interface PointObject {
   lat: number;
   lng: number;
   direction: number;
+  status: "active" | "lost";
 }

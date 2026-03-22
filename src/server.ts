@@ -49,15 +49,12 @@ const LOST_THRESHOLD_MS = 30 * 1000; // 30 seconds
 const REMOVE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 setInterval(() => {
-  // 1. Broadcast positions
   const batch = trackerService.getAndClearBatch();
-
   if (batch.length > 0) {
     io.emit("object_update", batch);
   }
 }, TICK_RATE_MS);
 
-// 2. Broadcast status updates on a slower loop (every 2 seconds)
 setInterval(() => {
   const statusUpdates = trackerService.checkStaleObjects(
     LOST_THRESHOLD_MS,
@@ -70,15 +67,16 @@ setInterval(() => {
 }, 2000);
 
 interface SimulatorState extends PointObject {
-  speed: number;
+  speed: number; // units per second
   targetSpeed: number;
   isAlive: boolean;
 }
 
 const trackerStates = new Map<string, SimulatorState>();
+const NUM_TRACKERS = 150;
 
-for (let i = 1; i <= 150; i++) {
-  const baseSpeed = (0.00025 + Math.random() * 0.001) / 4;
+for (let i = 1; i <= NUM_TRACKERS; i++) {
+  const baseSpeed = 0.0005 + Math.random() * 0.002;
 
   trackerStates.set(`TRK-${i}`, {
     id: `TRK-${i}`,
@@ -88,41 +86,73 @@ for (let i = 1; i <= 150; i++) {
     speed: baseSpeed,
     targetSpeed: baseSpeed,
     isAlive: true,
+    status: "active",
   });
 }
 
+let lastSimTime = Date.now();
+
 const simulateTrackers = () => {
-  trackerStates.forEach((state, id) => {
-    if (state.isAlive && Math.random() > 0.9998) {
-      console.log(`📡 [SIM] Tracker ${id} went offline.`);
+  const now = Date.now();
+  const dt = (now - lastSimTime) / 1000; // delta time in seconds
+  lastSimTime = now;
 
-      state.isAlive = false;
+  const states = Array.from(trackerStates.values());
+
+  // Roughly every 30 seconds, one random tracker goes offline
+  if (Math.random() < dt / 30) {
+    const aliveOnes = states.filter((s) => s.isAlive);
+
+    if (aliveOnes.length > 0) {
+      const target = aliveOnes[Math.floor(Math.random() * aliveOnes.length)];
+
+      target.isAlive = false;
+
+      console.log(`📡 [SIM] Tracker ${target.id} went offline.`);
     }
+  }
 
+  // Roughly every 60 seconds, one random offline tracker comes back
+  if (Math.random() < dt / 60) {
+    const deadOnes = states.filter((s) => !s.isAlive);
+
+    if (deadOnes.length > 0) {
+      const target = deadOnes[Math.floor(Math.random() * deadOnes.length)];
+
+      target.isAlive = true;
+
+      console.log(`📡 [SIM] Tracker ${target.id} is back online.`);
+    }
+  }
+
+  trackerStates.forEach((state) => {
     if (!state.isAlive) return;
 
-    let newDirection = state.direction + (Math.random() * 4 - 2);
+    // Gradual direction change
+    let newDirection = state.direction + (Math.random() * 10 - 5) * dt * 5;
 
     if (newDirection < 0) newDirection += 360;
     if (newDirection > 360) newDirection -= 360;
 
-    if (Math.random() > 0.98) {
-      state.targetSpeed = (0.00025 + Math.random() * 0.00125) / 4;
+    state.direction = Math.round(newDirection);
+
+    // Speed variation
+    if (Math.random() < 0.1 * dt) {
+      state.targetSpeed = 0.0005 + Math.random() * 0.002;
     }
 
-    const acceleration = 0.0000125;
-
+    const acceleration = 0.0005 * dt;
     if (state.speed < state.targetSpeed) {
       state.speed = Math.min(state.targetSpeed, state.speed + acceleration);
     } else if (state.speed > state.targetSpeed) {
       state.speed = Math.max(state.targetSpeed, state.speed - acceleration);
     }
 
-    // 3. Movement
-    const rad = (newDirection * Math.PI) / 180;
-    state.lat += Math.cos(rad) * state.speed;
-    state.lng += Math.sin(rad) * state.speed;
-    state.direction = Math.round(newDirection);
+    // Movement using Delta Time
+    const rad = (state.direction * Math.PI) / 180;
+
+    state.lat += Math.cos(rad) * state.speed * dt;
+    state.lng += Math.sin(rad) * state.speed * dt;
 
     trackerService.ingestLocation({
       id: state.id,
@@ -133,7 +163,7 @@ const simulateTrackers = () => {
   });
 };
 
-setInterval(simulateTrackers, 300);
+setInterval(simulateTrackers, 50);
 
 const PORT = process.env.PORT || 3001;
 
