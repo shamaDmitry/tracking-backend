@@ -1,4 +1,3 @@
-// src/services/TrackerService.ts
 import { PointObject } from "../types";
 
 export interface TrackerStatusUpdate {
@@ -55,10 +54,12 @@ class TrackerService {
         // Time to remove completely
         this.lastSeen.delete(id);
         this.lostObjects.delete(id);
+
         updates.push({ id, status: "removed" });
       } else if (elapsed > lostThresholdMs && !this.lostObjects.has(id)) {
         // Flag as lost (only if not already flagged)
         this.lostObjects.add(id);
+
         updates.push({ id, status: "lost" });
       }
     }
