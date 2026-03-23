@@ -78,20 +78,38 @@ interface SimulatorState extends PointObject {
 const trackerStates = new Map<string, SimulatorState>();
 const NUM_TRACKERS = 150;
 
-for (let i = 1; i <= NUM_TRACKERS; i++) {
-  const baseSpeed = 0.0005 + Math.random() * 0.002;
+function initTrackers() {
+  trackerStates.clear();
 
-  trackerStates.set(`TRK-${i}`, {
-    id: `TRK-${i}`,
-    lat: 50.4501 + (Math.random() * 0.06 - 0.03),
-    lng: 30.5234 + (Math.random() * 0.06 - 0.03),
-    direction: Math.floor(Math.random() * 360),
-    speed: baseSpeed,
-    targetSpeed: baseSpeed,
-    isAlive: true,
-    status: "active",
-  });
+  for (let i = 1; i <= NUM_TRACKERS; i++) {
+    const baseSpeed = 0.0005 + Math.random() * 0.002;
+
+    trackerStates.set(`TRK-${i}`, {
+      id: `TRK-${i}`,
+      lat: 50.4501 + (Math.random() * 0.06 - 0.03),
+      lng: 30.5234 + (Math.random() * 0.06 - 0.03),
+      direction: Math.floor(Math.random() * 360),
+      speed: baseSpeed,
+      targetSpeed: baseSpeed,
+      isAlive: true,
+      status: "active",
+    });
+  }
 }
+
+initTrackers();
+
+app.post("/reset", (req, res) => {
+  trackerService.reset();
+
+  initTrackers();
+
+  io.emit("simulation_reset");
+
+  console.log("🔄 [SIM] Simulation re-initialized.");
+
+  res.status(200).send({ message: "Simulation reset" });
+});
 
 let lastSimTime = Date.now();
 

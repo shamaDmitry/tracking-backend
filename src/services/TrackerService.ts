@@ -75,6 +75,13 @@ class TrackerService {
 
     return updates;
   }
+
+  public reset(): void {
+    this.pendingUpdates.clear();
+    this.lastSeen.clear();
+    this.lostObjects.clear();
+    this.pendingStatusUpdates = [];
+  }
 }
 
 export const trackerService = new TrackerService();
