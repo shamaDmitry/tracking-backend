@@ -102,46 +102,6 @@ const simulateTrackers = () => {
 
   const states = Array.from(trackerStates.values());
 
-  // Roughly every 30 seconds, one random tracker goes offline
-  if (Math.random() < dt / 30) {
-    const aliveOnes = states.filter((s) => s.isAlive);
-
-    if (aliveOnes.length > 0) {
-      const target = aliveOnes[Math.floor(Math.random() * aliveOnes.length)];
-
-      target.isAlive = false;
-
-      io.emit("status_update", [{ id: target.id, status: "lost" }]);
-      io.emit("status_log", {
-        id: target.id,
-        status: "lost",
-        timestamp: new Date(),
-      });
-
-      console.log(`📡 [SIM] Tracker ${target.id} went offline.`);
-    }
-  }
-
-  // Roughly every 6 minutes, one random offline tracker comes back
-  if (Math.random() < dt / 360) {
-    const deadOnes = states.filter((s) => !s.isAlive);
-
-    if (deadOnes.length > 0) {
-      const target = deadOnes[Math.floor(Math.random() * deadOnes.length)];
-
-      target.isAlive = true;
-
-      io.emit("status_update", [{ id: target.id, status: "active" }]);
-      io.emit("status_log", {
-        id: target.id,
-        status: "active",
-        timestamp: new Date(),
-      });
-
-      console.log(`📡 [SIM] Tracker ${target.id} is back online.`);
-    }
-  }
-
   trackerStates.forEach((state) => {
     if (!state.isAlive) return;
 
@@ -181,6 +141,27 @@ const simulateTrackers = () => {
 };
 
 setInterval(simulateTrackers, 50);
+
+// Tracker goes offline every 10 seconds
+setInterval(() => {
+  const states = Array.from(trackerStates.values());
+  const aliveOnes = states.filter((s) => s.isAlive);
+
+  if (aliveOnes.length > 0) {
+    const target = aliveOnes[Math.floor(Math.random() * aliveOnes.length)];
+
+    target.isAlive = false;
+
+    io.emit("status_update", [{ id: target.id, status: "lost" }]);
+    io.emit("status_log", {
+      id: target.id,
+      status: "lost",
+      timestamp: new Date(),
+    });
+
+    console.log(`📡 [SIM] Tracker ${target.id} went offline.`);
+  }
+}, 10000); // 10 seconds
 
 const PORT = process.env.PORT || 3001;
 
