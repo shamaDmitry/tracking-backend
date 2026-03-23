@@ -45,11 +45,12 @@ io.on("connection", (socket) => {
 });
 
 const TICK_RATE_MS = 100; // 10 updates per second
-const LOST_THRESHOLD_MS = 30 * 1000; // 30 seconds
+const LOST_THRESHOLD_MS = 1000; // 1 second
 const REMOVE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 setInterval(() => {
   const batch = trackerService.getAndClearBatch();
+
   if (batch.length > 0) {
     io.emit("object_update", batch);
   }
@@ -60,6 +61,8 @@ setInterval(() => {
     LOST_THRESHOLD_MS,
     REMOVE_THRESHOLD_MS,
   );
+
+  console.log("statusUpdates", statusUpdates);
 
   if (statusUpdates.length > 0) {
     io.emit("status_update", statusUpdates);
@@ -108,18 +111,32 @@ const simulateTrackers = () => {
 
       target.isAlive = false;
 
+      io.emit("status_update", [{ id: target.id, status: "lost" }]);
+      io.emit("status_log", {
+        id: target.id,
+        status: "lost",
+        timestamp: new Date(),
+      });
+
       console.log(`📡 [SIM] Tracker ${target.id} went offline.`);
     }
   }
 
-  // Roughly every 60 seconds, one random offline tracker comes back
-  if (Math.random() < dt / 60) {
+  // Roughly every 6 minutes, one random offline tracker comes back
+  if (Math.random() < dt / 360) {
     const deadOnes = states.filter((s) => !s.isAlive);
 
     if (deadOnes.length > 0) {
       const target = deadOnes[Math.floor(Math.random() * deadOnes.length)];
 
       target.isAlive = true;
+
+      io.emit("status_update", [{ id: target.id, status: "active" }]);
+      io.emit("status_log", {
+        id: target.id,
+        status: "active",
+        timestamp: new Date(),
+      });
 
       console.log(`📡 [SIM] Tracker ${target.id} is back online.`);
     }
